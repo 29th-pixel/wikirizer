@@ -7,8 +7,12 @@ def wikiScrape(url):
 
     res.raise_for_status()
     wiki = bs4.BeautifulSoup(res.text,"lxml")
-    elems = wiki.select('p') + wiki.select('li')
+    elems = wiki.select('p')
     
+    # for i in wiki.find_all('li'):
+    #     if (i.find('<a>') == False):
+    #         print(i)
+        
     
     for i in range(len(elems)):
         print(elems[i].getText())
