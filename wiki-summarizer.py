@@ -8,8 +8,6 @@ import networkx as nx
 from bs4 import BeautifulSoup
 import sys
 import requests
-# from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
-import spacy 
  
 def read_article(url):
     res = requests.get(url + ' '.join(sys.argv[1:]))
@@ -68,10 +66,6 @@ def build_similarity_matrix(sentences, stop_words):
 def generate_summary(url, top_n=5):
     nltk.download("stopwords")
     stop_words = stopwords.words('english')
-    # stop_words = ENGLISH_STOP_WORDS
-    # en = spacy.load("en_core_web_sm")
-    # stop_words = en.Defaults.stop_words
-    summarize_text = []
 
     # Step 1 - Read text anc split it
     sentences =  read_article(url)
