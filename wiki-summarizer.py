@@ -8,6 +8,7 @@ from sys import argv
 from requests import get
 import telebot
 from os import environ
+from re import sub
 from dotenv import load_dotenv
  
 load_dotenv()
@@ -32,7 +33,8 @@ def read_article(url):
     
     for i in range(len(article)):
         print(article[i].getText())
-        sentences.append(article[i].getText().replace("[^a-zA-Z]", " ").split(" "))
+        text = sub(r'\[[0-9]*\]', ' ', article[i].getText())
+        sentences.append(text.replace("[^a-zA-Z]", " ").split(" "))
     sentences.pop() 
 
     return sentences
@@ -98,20 +100,20 @@ def generate_summary(url, top_n=5):
     for i in range(top_n):
       summarize_text.append(" ".join(ranked_sentence[i][1]))
 
-    # Step 5 - Offcourse, output the summarize text
+    # Step 5 - Return the summarize text
     return (summarize_text)
 
 @bot.message_handler()
 def handle_text_doc(message):
-    splitted = telebot.util.split_string(generate_summary(message.text),3000)
+    splitted = telebot.util.split_string(generate_summary(message.text,3),3000)
     title = get_title(message.text)
-
     bot.send_message(message.chat.id, f"Summary of {title}:")
-
+    
     for text in splitted[0]:
+        if (text == ' '):
+            continue
         print(text)
         bot.send_message(message.chat.id, text)
-
 
 # let's begin
 if __name__ == "__main__":
