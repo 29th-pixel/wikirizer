@@ -112,6 +112,7 @@ def handle_text_doc(message):
     for text in splitted[0]:
         if (text == ' '):
             continue
+        text = sub(r' +',' ',text)
         print(text)
         bot.send_message(message.chat.id, text)
 
