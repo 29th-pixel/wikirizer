@@ -1,16 +1,29 @@
-#!/usr/bin/env python
-# coding: utf-8
 import nltk
 from nltk.corpus import stopwords
 from nltk.cluster.util import cosine_distance
 import numpy as np
 import networkx as nx
 from bs4 import BeautifulSoup
-import sys
-import requests
+from sys import argv
+from requests import get
+import telebot
+from os import environ
+from dotenv import load_dotenv
  
+load_dotenv()
+API_KEY = environ.get('API_KEY')
+bot = telebot.TeleBot(token = API_KEY)
+
+def get_title(url):
+    res = get(url + ' '.join(argv[1:]))
+    res.raise_for_status()
+    wiki = BeautifulSoup(res.text,"lxml")
+    title = wiki.title.get_text()
+
+    return title
+
 def read_article(url):
-    res = requests.get(url + ' '.join(sys.argv[1:]))
+    res = get(url + ' '.join(argv[1:]))
     
     res.raise_for_status()
     wiki = BeautifulSoup(res.text,"lxml")
@@ -21,7 +34,7 @@ def read_article(url):
         print(article[i].getText())
         sentences.append(article[i].getText().replace("[^a-zA-Z]", " ").split(" "))
     sentences.pop() 
-    
+
     return sentences
 
 def sentence_similarity(sent1, sent2, stopwords=None):
@@ -62,10 +75,11 @@ def build_similarity_matrix(sentences, stop_words):
 
     return similarity_matrix
 
-
 def generate_summary(url, top_n=5):
     nltk.download("stopwords")
     stop_words = stopwords.words('english')
+
+    summarize_text = []
 
     # Step 1 - Read text anc split it
     sentences =  read_article(url)
@@ -85,7 +99,20 @@ def generate_summary(url, top_n=5):
       summarize_text.append(" ".join(ranked_sentence[i][1]))
 
     # Step 5 - Offcourse, output the summarize text
-    print("Summarize Text: \n", ". ".join(summarize_text))
+    return (summarize_text)
+
+@bot.message_handler()
+def handle_text_doc(message):
+    splitted = telebot.util.split_string(generate_summary(message.text),3000)
+    title = get_title(message.text)
+
+    bot.send_message(message.chat.id, f"Summary of {title}:")
+
+    for text in splitted[0]:
+        print(text)
+        bot.send_message(message.chat.id, text)
+
 
 # let's begin
-generate_summary('https://en.wikipedia.org/wiki/Web_scraping')
+if __name__ == "__main__":
+    bot.polling()
