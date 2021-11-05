@@ -8,7 +8,7 @@ from sys import argv
 from requests import get
 import telebot
 from os import environ
-from re import sub
+import re
 from dotenv import load_dotenv
  
 load_dotenv()
@@ -33,7 +33,7 @@ def read_article(url):
     
     for i in range(len(article)):
         print(article[i].getText())
-        text = sub(r'\[[0-9]*\]', ' ', article[i].getText())
+        text = re.sub(r'\[[0-9]*\]', ' ', article[i].getText())
         # sentences.append(sub("[^a-zA-Z]", " ", text).split(" "))
         sentences.append(text.replace("[^a-zA-Z]", " ").split(" "))
     sentences.pop() 
@@ -105,23 +105,6 @@ def generate_summary(url, top_n=5):
     # Step 5 - Offcourse, output the summarize text
     return (summarize_text)
 
-# @bot.message_handler(regexp="https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)")
-# @bot.message_handler(func = lambda message: True, content_types=['text'])
-# @bot.message_handler(regexp= "((http|https)://)" + "[a-zA-Z0-9@:%._\\+~#?&//=]" + 
-#                             "{2,256}\\.[a-z]" + "{2,6}\\b([-a-zA-Z0-9@:%" + "._\\+~#?&//=]*)")
-@bot.message_handler(regexp="(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?")
-def handle_text_doc(message):
-    splitted = telebot.util.split_string(generate_summary(message.text,3),3000)
-    title = get_title(message.text)
-    bot.send_message(message.chat.id, f"Summary of {title}:")
-
-    for text in splitted[0]:
-        if (text == ' '):
-            continue
-        text = sub(r' +',' ',text)
-        print(text)
-        bot.send_message(message.chat.id, text)
-
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
     '''botsome
@@ -131,6 +114,36 @@ def greet(message):
     greet = (f"Hello {message.from_user.username},\nWikipedia Summarizer Bot this side.\nHere you can send" +
             " link of any wikipedia article to summarize it.\nThis bot is created by Gurman Singh.\nThank You for using it")
     bot.send_message(message.chat.id, greet)
+
+# @bot.message_handler(regexp="https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)")
+# @bot.message_handler(func = lambda message: True, content_types=['text'])
+# @bot.message_handler(regexp= "((http|https)://)" + "[a-zA-Z0-9@:%._\\+~#?&//=]" + 
+#                             "{2,256}\\.[a-z]" + "{2,6}\\b([-a-zA-Z0-9@:%" + "._\\+~#?&//=]*)")
+@bot.message_handler(regexp="(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?")
+def handle_text_doc(message):
+
+    # for line in message.text:
+    # url = findall("(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",list(message.text))
+    url = re.search("(?P<url>https?://[^\s]+)", message.text).group("url")
+    print(url)
+    
+    splitted = telebot.util.split_string(generate_summary(url,3),3000)
+    title = get_title(url)
+    bot.send_message(message.chat.id, f"Summary of {title}:")
+
+    for text in splitted[0]:
+        if (text == ' '):
+            continue
+        text = re.sub(r' +',' ',text)
+        print(text)
+        bot.send_message(message.chat.id, text)
+
+
+@bot.message_handler(func = lambda message: True, 
+                        content_types=['audio','photo','voice','video','document','contact','text','location','sticker'])
+def default_message(message):
+    bot.send_message(message.chat.id, "Command Not recognised")
+
 # let's begin
 if __name__ == "__main__":
     bot.polling()
