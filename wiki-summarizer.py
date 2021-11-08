@@ -1,3 +1,4 @@
+from logging import error
 import nltk
 from nltk.corpus import stopwords
 from nltk.cluster.util import cosine_distance
@@ -24,9 +25,11 @@ def get_title(url):
     return title
 
 def read_article(url):
-    res = get(url + ' '.join(argv[1:]))
-    
-    res.raise_for_status()
+    try:
+        res = get(url + ' '.join(argv[1:]))
+        res.raise_for_status()
+    except:
+        return ValueError
     wiki = BeautifulSoup(res.text,"lxml")
     article = wiki.select("p")
     sentences = []
@@ -35,6 +38,8 @@ def read_article(url):
         print(article[i].getText())
         text = re.sub(r'\[[0-9]*\]', ' ', article[i].getText())
         # sentences.append(sub("[^a-zA-Z]", " ", text).split(" "))
+        if (text == '\n' or text == ' '):
+            continue
         sentences.append(text.replace("[^a-zA-Z]", " ").split(" "))
     sentences.pop() 
 
@@ -96,7 +101,7 @@ def generate_summary(url, top_n=5):
     scores = nx.pagerank(sentence_similarity_graph)
 
     # Step 4 - Sort the rank and pick top sentences
-    ranked_sentence = sorted(((scores[i] if i!=1 else 1,s) for i,s in enumerate(sentences)), reverse=True)    
+    ranked_sentence = sorted(((scores[i] if i!=0 else 1,s) for i,s in enumerate(sentences)), reverse=True)    
     print("Indexes of top ranked_sentence order are ", ranked_sentence)    
 
     for i in range(top_n):
@@ -121,22 +126,20 @@ def greet(message):
 #                             "{2,256}\\.[a-z]" + "{2,6}\\b([-a-zA-Z0-9@:%" + "._\\+~#?&//=]*)")
 @bot.message_handler(regexp="(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?")
 def handle_text_doc(message):
+    try:
+        url = re.search("(?P<url>https?://[^\s]+)", message.text).group("url")
+        print(url)
+    except :
+        print("Error reading url")
+    else:
+        splitted = telebot.util.split_string(generate_summary(url,3),3000)
+        title = get_title(url)
+        bot.send_message(message.chat.id, f"Summary of {title}:")
 
-    # for line in message.text:
-    # url = findall("(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?",list(message.text))
-    url = re.search("(?P<url>https?://[^\s]+)", message.text).group("url")
-    print(url)
-    
-    splitted = telebot.util.split_string(generate_summary(url,3),3000)
-    title = get_title(url)
-    bot.send_message(message.chat.id, f"Summary of {title}:")
-
-    for text in splitted[0]:
-        if (text == ' '):
-            continue
-        text = re.sub(r' +',' ',text)
-        print(text)
-        bot.send_message(message.chat.id, text)
+        for text in splitted[0]:
+            text = re.sub(r' +',' ',text)
+            print(text)
+            bot.send_message(message.chat.id, text)
 
 
 @bot.message_handler(func = lambda message: True, 
