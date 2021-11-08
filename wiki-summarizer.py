@@ -1,4 +1,4 @@
-from logging import error
+from fpdf import FPDF
 import nltk
 from nltk.corpus import stopwords
 from nltk.cluster.util import cosine_distance
@@ -8,12 +8,15 @@ from bs4 import BeautifulSoup
 from sys import argv
 from requests import get,head
 import telebot
-from os import environ
+import os
 import re
 from dotenv import load_dotenv
+import time
+import textwrap
+from PIL import Image, ImageFont, ImageDraw
  
 load_dotenv()
-API_KEY = environ.get('API_KEY')
+API_KEY = os.environ.get('API_KEY')
 bot = telebot.TeleBot(token = API_KEY)
 
 def valid_site(url):
@@ -30,7 +33,6 @@ def get_title(url):
     res.raise_for_status()
     wiki = BeautifulSoup(res.text,"lxml")
     title = wiki.title.get_text()
-
     return title
 
 def read_article(url):
@@ -46,6 +48,7 @@ def read_article(url):
     for i in range(len(article)):
         print(article[i].getText())
         text = re.sub(r'\[[0-9]*\]', ' ', article[i].getText())
+        text = re.sub(r' +',' ',text)
         if (text == '\n' or text == ' '):
             continue
         sentences.append(text.replace("[^a-zA-Z]", " ").split(" "))
@@ -118,6 +121,96 @@ def generate_summary(url, top_n=5):
     # Step 5 - Return the summarize text
     return (summarize_text)
 
+def export_summary(message):
+    bot.send_message(message.chat.id, (f"{message.from_user.username}, You can export this summary to\nText document"+ 
+                    "\nImage and \nPDF"))
+    bot.send_message(message.chat.id, "Choose any of the above options")
+    markup = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True, row_width=2)
+
+    itembtn1 = telebot.types.KeyboardButton('Text File')
+    itembtn2 = telebot.types.KeyboardButton('Image')
+    itembtn3 = telebot.types.KeyboardButton('PDF')
+    itembtn4 = telebot.types.KeyboardButton('None')
+    
+    markup.add(itembtn1, itembtn2, itembtn3,itembtn4)
+    bot.send_message(message.chat.id, "Choose one letter:", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text == 'Text File')
+def export_text(message):
+    bot.send_message(message.chat.id, "Your text file is being processed")
+    file_name = time.strftime("%Y%m%d-%H%M%S") + ".txt"
+    file = open(file_name,'w', encoding="utf-8")
+
+    try:
+        file.write(handle_text_doc.title + '\n')
+        for text in handle_text_doc.splitted[0]:
+            if len(text)>1 or text != '\n':
+                # text = re.sub(r' +',' ',text)
+                file.write(str(text)+'\n')
+        file.close()
+    
+    except:
+        bot.send_message(message.chat.id, "Error No URL is passed")
+    else: 
+        file = open(file_name,'rb')
+        bot.send_message(message.chat.id, "File processing completed")
+        bot.send_document(message.chat.id, data=file)
+    
+    file.close()
+    os.remove(file_name)
+
+@bot.message_handler(func=lambda message: message.text == 'PDF')
+def export_pdf(message):
+    bot.send_message(message.chat.id, "Your text file is being processed")
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Times",style='B', size = 16)
+
+    try:
+        pdf.cell(200, 7.5, txt = f"Summary - {handle_text_doc.title}", ln = 1, align = 'C')
+    except:
+        bot.send_message(message.chat.id, "Error No URL is passed")
+    else:
+        pdf.set_font("Times", size = 12)
+        for text in handle_text_doc.splitted[0]:
+            text2 = text.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(200, 5, txt = text2, align = 'L')
+
+        file_name = time.strftime("%Y%m%d-%H%M%S") + ".pdf"
+        pdf.output(file_name)
+        bot.send_message(message.chat.id, "File processing completed")
+        bot.send_document(message.chat.id, data = open(file_name,'rb'))
+        os.remove(file_name)
+
+@bot.message_handler(func= lambda message: message.text == 'Image')
+def exportImage(message):
+    bot.send_message(message.chat.id, "Your text file is being processed")
+    img = Image.new('RGB', (1170, 2532), color='white')
+    Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 75)
+    draw = ImageDraw.Draw(img)
+    y_text = 50
+
+    try:
+        line_width, line_height = Font.getsize(handle_text_doc.title)
+        draw.text(((1170 - line_width) / 2, y_text), f"Summary - {handle_text_doc.title}", font=Font, fill=(0,0,0))
+        y_text += line_height
+    except:
+        bot.send_message(message.chat.id, "Error No URL is passed")
+    else:    
+        Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 45)
+        for text in handle_text_doc.splitted[0]:
+            lines = textwrap.wrap(text, width=60)
+            for line in lines:
+                line_width, line_height = Font.getsize(line)
+                draw.text(((1170 - line_width) / 2, y_text), line, font=Font, fill=(0,0,0))
+                y_text += line_height
+        
+        file_name = time.strftime("%Y%m%d-%H%M%S") + ".png"
+        img.save(file_name)
+        bot.send_message(message.chat.id, "File processing completed")
+        bot.send_photo(message.chat.id, photo=open(file_name,'rb'))
+        os.remove(file_name)
+
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
     greet = (f"Hello {message.from_user.username},\nWikipedia Summarizer Bot this side.\nHere you can send" +
@@ -133,23 +226,24 @@ def handle_text_doc(message):
         print("Error reading url")
     else:
         if (valid_site(url)):
-            splitted = telebot.util.split_string(generate_summary(url,3),3000)
-            title = get_title(url)
-            bot.send_message(message.chat.id, f"Summary of {title}:")
+            handle_text_doc.splitted = telebot.util.split_string(generate_summary(url,3),3000)
+            handle_text_doc.title = get_title(url)
+            bot.send_message(message.chat.id, f"Summary of {handle_text_doc.title}:")
 
-            for text in splitted[0]:
-                text = re.sub(r' +',' ',text)
+            for text in handle_text_doc.splitted[0]:
                 print(text)
                 bot.send_message(message.chat.id, text)
+
+            export_summary(message)
         else:
             bot.send_message(message.chat.id, "Your Link is broken please check it")
 
-@bot.message_handler(func = lambda message: True, content_types=['audio','photo','voice',
-                                                                'video','document','contact',
-                                                                'text','location','sticker'])
+@bot.message_handler(func = lambda message: True, 
+                        content_types=['audio','photo','voice','video','document','contact','text','location','sticker'])
 def default_message(message):
     bot.send_message(message.chat.id, "Command Not recognised")
 
 # let's begin
 if __name__ == "__main__":
-    bot.polling()
+    while(True):
+        bot.polling()
