@@ -144,7 +144,6 @@ def handle_text_doc(message):
         else:
             bot.send_message(message.chat.id, "Your Link is broken please check it")
 
-
 @bot.message_handler(func = lambda message: True, content_types=['audio','photo','voice',
                                                                 'video','document','contact',
                                                                 'text','location','sticker'])
