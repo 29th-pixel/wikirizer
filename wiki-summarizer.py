@@ -3,7 +3,7 @@ from fpdf import FPDF
 import nltk
 from nltk.corpus import stopwords
 from nltk.cluster.util import cosine_distance
-from nltk.corpus.reader import aligned
+# from nltk.corpus.reader import aligned
 import numpy as np
 import networkx as nx
 from bs4 import BeautifulSoup
@@ -14,8 +14,10 @@ import os
 import re
 from dotenv import load_dotenv
 import time
-
-from telebot.types import Document
+import textwrap
+# import PIL
+from PIL import Image, ImageFont, ImageDraw
+# from telebot.types import Document
  
 load_dotenv()
 API_KEY = os.environ.get('API_KEY')
@@ -51,6 +53,7 @@ def read_article(url):
     for i in range(len(article)):
         print(article[i].getText())
         text = re.sub(r'\[[0-9]*\]', ' ', article[i].getText())
+        text = re.sub(r' +',' ',text)
         # sentences.append(sub("[^a-zA-Z]", " ", text).split(" "))
         if (text == '\n' or text == ' '):
             continue
@@ -146,13 +149,12 @@ def export_text(message):
         file.write(handle_text_doc.title + '\n')
         for text in handle_text_doc.splitted[0]:
             if len(text)>1 or text != '\n':
-                text = re.sub(r' +',' ',text)
+                # text = re.sub(r' +',' ',text)
                 file.write(str(text)+'\n')
         file.close()
     
     except:
         bot.send_message(message.chat.id, "Error No URL is passed")
-    
     else: 
         file = open(file_name,'rb')
         bot.send_message(message.chat.id, "File processing completed")
@@ -163,6 +165,7 @@ def export_text(message):
 
 @bot.message_handler(func=lambda message: message.text == 'PDF')
 def export_pdf(message):
+    bot.send_message(message.chat.id, "Your text file is being processed")
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Times",style='B', size = 16)
@@ -174,15 +177,44 @@ def export_pdf(message):
     else:
         pdf.set_font("Times", size = 12)
         for text in handle_text_doc.splitted[0]:
-            text = re.sub(r' +',' ',text)
+            # text = re.sub(r' +',' ',text)
             text2 = text.encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(200, 5, txt = text2, align = 'L')
 
         file_name = time.strftime("%Y%m%d-%H%M%S") + ".pdf"
         pdf.output(file_name)
+        bot.send_message(message.chat.id, "File processing completed")
         bot.send_document(message.chat.id, data = open(file_name,'rb'))
         os.remove(file_name)
 
+@bot.message_handler(func= lambda message: message.text == 'Image')
+def exportImage(message):
+    bot.send_message(message.chat.id, "Your text file is being processed")
+    img = Image.new('RGB', (1170, 2532), color='white')
+    Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 75)
+    draw = ImageDraw.Draw(img)
+    y_text = 50
+
+    try:
+        line_width, line_height = Font.getsize(handle_text_doc.title)
+        draw.text(((1170 - line_width) / 2, y_text), f"Summary - {handle_text_doc.title}", font=Font, fill=(0,0,0))
+        y_text += line_height
+    except:
+        bot.send_message(message.chat.id, "Error No URL is passed")
+    else:    
+        Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 45)
+        for text in handle_text_doc.splitted[0]:
+            lines = textwrap.wrap(text, width=60)
+            for line in lines:
+                line_width, line_height = Font.getsize(line)
+                draw.text(((1170 - line_width) / 2, y_text), line, font=Font, fill=(0,0,0))
+                y_text += line_height
+        
+        file_name = time.strftime("%Y%m%d-%H%M%S") + ".png"
+        img.save(file_name)
+        bot.send_message(message.chat.id, "File processing completed")
+        bot.send_photo(message.chat.id, photo=open(file_name,'rb'))
+        os.remove(file_name)
 
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
@@ -208,7 +240,7 @@ def handle_text_doc(message):
             bot.send_message(message.chat.id, f"Summary of {handle_text_doc.title}:")
 
             for text in handle_text_doc.splitted[0]:
-                text = re.sub(r' +',' ',text)
+                # text = re.sub(r' +',' ',text)
                 print(text)
                 bot.send_message(message.chat.id, text)
 
