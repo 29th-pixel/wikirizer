@@ -191,7 +191,7 @@ def exportImage(message):
     y_text = 50
 
     try:
-        line_width, line_height = Font.getsize(handle_text_doc.title)
+        line_width, line_height = Font.getsize(f"Summary - {handle_text_doc.title}")
         draw.text(((1170 - line_width) / 2, y_text), f"Summary - {handle_text_doc.title}", font=Font, fill=(0,0,0))
         y_text += line_height
     except:
