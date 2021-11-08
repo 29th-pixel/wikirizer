@@ -8,12 +8,13 @@ from bs4 import BeautifulSoup
 from sys import argv
 from requests import get,head
 import telebot
-from os import environ
+import os
 import re
 from dotenv import load_dotenv
+import time
  
 load_dotenv()
-API_KEY = environ.get('API_KEY')
+API_KEY = os.environ.get('API_KEY')
 bot = telebot.TeleBot(token = API_KEY)
 
 def valid_site(url):
@@ -119,6 +120,42 @@ def generate_summary(url, top_n=5):
     # Step 5 - Offcourse, output the summarize text
     return (summarize_text)
 
+def export_summary(message):
+    bot.send_message(message.chat.id, (f"{message.from_user.username}, You can export this summary to\nText document"+ 
+                    "\nImage and \nPDF"))
+    bot.send_message(message.chat.id, "Choose any of the above options")
+    markup = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True, row_width=2)
+    itembtn1 = telebot.types.KeyboardButton('Text File')
+    itembtn2 = telebot.types.KeyboardButton('Image')
+    itembtn3 = telebot.types.KeyboardButton('PDF')
+    itembtn4 = telebot.types.KeyboardButton('None')
+    markup.add(itembtn1, itembtn2, itembtn3,itembtn4)
+    bot.send_message(message.chat.id, "Choose one letter:", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text =='Text File')
+def export_text(message):
+    bot.send_message(message.chat.id, "Your text file is being processed")
+    file_name = time.strftime("%Y%m%d-%H%M%S") + ".txt"
+    file = open(file_name,'w', encoding="utf-8")
+
+    try:
+        file.write(handle_text_doc.title + '\n')
+        for text in handle_text_doc.splitted[0]:
+            if len(text)>1 or text != '\n':
+                file.write(str(text)+'\n')
+        file.close()
+    
+    except:
+        bot.send_message(message.chat.id, "Error No URL is passed")
+    
+    else: 
+        file = open(file_name,'rb')
+        bot.send_message(message.chat.id, "File processing completed")
+        bot.send_document(message.chat.id, data=file)
+    
+    file.close()
+    os.remove(file_name)
+
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
     '''botsome
@@ -138,14 +175,16 @@ def handle_text_doc(message):
         print("Error reading url")
     else:
         if (valid_site(url)):
-            splitted = telebot.util.split_string(generate_summary(url,3),3000)
-            title = get_title(url)
-            bot.send_message(message.chat.id, f"Summary of {title}:")
+            handle_text_doc.splitted = telebot.util.split_string(generate_summary(url,3),3000)
+            handle_text_doc.title = get_title(url)
+            bot.send_message(message.chat.id, f"Summary of {handle_text_doc.title}:")
 
-            for text in splitted[0]:
+            for text in handle_text_doc.splitted[0]:
                 text = re.sub(r' +',' ',text)
                 print(text)
                 bot.send_message(message.chat.id, text)
+
+            export_summary(message)
         else:
             bot.send_message(message.chat.id, "Your Link is broken please check it")
 
@@ -157,4 +196,5 @@ def default_message(message):
 
 # let's begin
 if __name__ == "__main__":
-    bot.polling()
+    while(True):
+        bot.polling()
