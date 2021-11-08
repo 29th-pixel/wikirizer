@@ -1,7 +1,9 @@
-from logging import error
+# from logging import error
+from fpdf import FPDF
 import nltk
 from nltk.corpus import stopwords
 from nltk.cluster.util import cosine_distance
+from nltk.corpus.reader import aligned
 import numpy as np
 import networkx as nx
 from bs4 import BeautifulSoup
@@ -12,6 +14,8 @@ import os
 import re
 from dotenv import load_dotenv
 import time
+
+from telebot.types import Document
  
 load_dotenv()
 API_KEY = os.environ.get('API_KEY')
@@ -132,7 +136,7 @@ def export_summary(message):
     markup.add(itembtn1, itembtn2, itembtn3,itembtn4)
     bot.send_message(message.chat.id, "Choose one letter:", reply_markup=markup)
 
-@bot.message_handler(func=lambda message: message.text =='Text File')
+@bot.message_handler(func=lambda message: message.text == 'Text File')
 def export_text(message):
     bot.send_message(message.chat.id, "Your text file is being processed")
     file_name = time.strftime("%Y%m%d-%H%M%S") + ".txt"
@@ -142,6 +146,7 @@ def export_text(message):
         file.write(handle_text_doc.title + '\n')
         for text in handle_text_doc.splitted[0]:
             if len(text)>1 or text != '\n':
+                text = re.sub(r' +',' ',text)
                 file.write(str(text)+'\n')
         file.close()
     
@@ -155,6 +160,29 @@ def export_text(message):
     
     file.close()
     os.remove(file_name)
+
+@bot.message_handler(func=lambda message: message.text == 'PDF')
+def export_pdf(message):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Times",style='B', size = 16)
+
+    try:
+        pdf.cell(200, 7.5, txt = f"Summary - {handle_text_doc.title}", ln = 1, align = 'C')
+    except:
+        bot.send_message(message.chat.id, "Error No URL is passed")
+    else:
+        pdf.set_font("Times", size = 12)
+        for text in handle_text_doc.splitted[0]:
+            text = re.sub(r' +',' ',text)
+            text2 = text.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(200, 5, txt = text2, align = 'L')
+
+        file_name = time.strftime("%Y%m%d-%H%M%S") + ".pdf"
+        pdf.output(file_name)
+        bot.send_document(message.chat.id, data = open(file_name,'rb'))
+        os.remove(file_name)
+
 
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
@@ -187,7 +215,6 @@ def handle_text_doc(message):
             export_summary(message)
         else:
             bot.send_message(message.chat.id, "Your Link is broken please check it")
-
 
 @bot.message_handler(func = lambda message: True, 
                         content_types=['audio','photo','voice','video','document','contact','text','location','sticker'])
