@@ -6,7 +6,7 @@ import numpy as np
 import networkx as nx
 from bs4 import BeautifulSoup
 from sys import argv
-from requests import get
+from requests import get,head
 import telebot
 from os import environ
 import re
@@ -15,6 +15,15 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = environ.get('API_KEY')
 bot = telebot.TeleBot(token = API_KEY)
+
+def valid_site(url):
+    r = head(f"{url}")
+    if r.status_code == 200:
+        return True
+    elif 400 <= r.status_code < 500:
+        return False
+    else:
+        return None
 
 def get_title(url):
     res = get(url + ' '.join(argv[1:]))
@@ -123,14 +132,17 @@ def handle_text_doc(message):
     except :
         print("Error reading url")
     else:
-        splitted = telebot.util.split_string(generate_summary(url,3),3000)
-        title = get_title(url)
-        bot.send_message(message.chat.id, f"Summary of {title}:")
+        if (valid_site(url)):
+            splitted = telebot.util.split_string(generate_summary(url,3),3000)
+            title = get_title(url)
+            bot.send_message(message.chat.id, f"Summary of {title}:")
 
-        for text in splitted[0]:
-            text = re.sub(r' +',' ',text)
-            print(text)
-            bot.send_message(message.chat.id, text)
+            for text in splitted[0]:
+                text = re.sub(r' +',' ',text)
+                print(text)
+                bot.send_message(message.chat.id, text)
+        else:
+            bot.send_message(message.chat.id, "Your Link is broken please check it")
 
 
 @bot.message_handler(func = lambda message: True, content_types=['audio','photo','voice',
