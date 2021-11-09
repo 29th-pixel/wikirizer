@@ -1,10 +1,8 @@
-### Understand Text Summarization and create your own summarizer in python
+### Making a Telegram Bot to summarize Wikipedia text.
 
-Summarization can be defined as a task of producing a concise and fluent summary while preserving key information and overall meaning.
+Summarization can be defined as a task of producing a concise and fluent summary while preserving key information and overall meaning. Here the I have used Extractive Summarization, which means that it reads the text and get the most important points added to the summary.
+I have also make sure to include the 1 paragraph of every article to make the reference clear.
 
-Impact
-Summarization systems often have additional evidence they can utilize in order to specify the most important topics of document(s). For example, when summarizing blogs, there are discussions or comments coming after the blog post that are good sources of information to determine which parts of the blog are critical and interesting.
+Users can also export the Summary to Text, PDF and Image files according to their needs which makes sharing of summary much easier.
 
-In scientific paper summarization, there is a considerable amount of information such as cited papers and conference information which can be leveraged to identify important sentences in the original paper.
-
-Complete article with code and results can be found on [Medium](https://towardsdatascience.com/understand-text-summarization-and-create-your-own-summarizer-in-python-b26a9f09fc70)
+This bot will be hosted in few days and become ready to use. You can add it to your Telegram by searching wikiSummarize_bot or following this link will take you directly to bot [wikiSummarize_bot](http://t.me/wikiSummarize_bot)
