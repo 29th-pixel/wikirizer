@@ -20,6 +20,14 @@ API_KEY = os.environ.get('API_KEY')
 bot = telebot.TeleBot(token = API_KEY)
 
 def valid_site(url):
+    """This Functions checks if the given url exists or not
+
+    Args:
+        url (string): Link given by the user
+
+    Returns:
+        bool: returns true if url is valid
+    """
     r = head(f"{url}")
     if r.status_code == 200:
         return True
@@ -29,6 +37,14 @@ def valid_site(url):
         return None
 
 def get_title(url):
+    """Gets the title from the url
+
+    Args:
+        url (string): url given by user
+
+    Returns:
+        string: title string is return
+    """
     res = get(url + ' '.join(argv[1:]))
     res.raise_for_status()
     wiki = BeautifulSoup(res.text,"lxml")
@@ -36,6 +52,14 @@ def get_title(url):
     return title
 
 def read_article(url):
+    """Scrape the contents from the url
+
+    Args:
+        url (string): url passed by user
+
+    Returns:
+        list: list of sentences in the web page
+    """
     try:
         res = get(url + ' '.join(argv[1:]))
         res.raise_for_status()
@@ -57,6 +81,16 @@ def read_article(url):
     return sentences
 
 def sentence_similarity(sent1, sent2, stopwords=None):
+    """Generates the sentence similarity vector
+
+    Args:
+        sent1 (string): Sentence 1
+        sent2 (string): Sentence 2
+        stopwords (list, optional): list of stopwords. Defaults to None.
+
+    Returns:
+        float: vector of sentence similarity
+    """
     if stopwords is None:
         stopwords = []
  
@@ -83,6 +117,15 @@ def sentence_similarity(sent1, sent2, stopwords=None):
     return 1 - cosine_distance(vector1, vector2)
  
 def build_similarity_matrix(sentences, stop_words):
+    """Build similarity @2D matrix 
+
+    Args:
+        sentences (list): List of sentences 
+        stop_words (list): list of stop words
+
+    Returns:
+        array: similarity matrix
+    """
     # Create an empty similarity matrix
     similarity_matrix = np.zeros((len(sentences), len(sentences)))
  
@@ -90,12 +133,20 @@ def build_similarity_matrix(sentences, stop_words):
         for idx2 in range(len(sentences)):
             if idx1 == idx2: #ignore if both are same sentences
                 continue 
-            
             similarity_matrix[idx1][idx2] = sentence_similarity(sentences[idx1], sentences[idx2], stop_words)
 
     return similarity_matrix
 
 def generate_summary(url, top_n=5):
+    """Selects important paragraphs to put in summary
+
+    Args:
+        url (string): Url given by user
+        top_n (int, optional): Number of top paragraphs required. Defaults to 5.
+
+    Returns:
+        list: list of selected paragraphes
+    """
     nltk.download("stopwords")
     stop_words = stopwords.words('english')
     
@@ -122,6 +173,11 @@ def generate_summary(url, top_n=5):
     return (summarize_text)
 
 def export_summary(message):
+    """give user options to export in Image, Text or PDF file
+
+    Args:
+        message (object): message object of telebot
+    """
     bot.send_message(message.chat.id, (f"{message.from_user.username}, You can export this summary to\nText document"+ 
                     "\nImage and \nPDF"))
     bot.send_message(message.chat.id, "Choose any of the above options")
@@ -137,6 +193,11 @@ def export_summary(message):
 
 @bot.message_handler(func=lambda message: message.text == 'Text File')
 def exportText(message):
+    """Exports the summary in .txt file and then sends it to the user
+
+    Args:
+        message (object)
+    """
     bot.send_message(message.chat.id, "Your text file is being processed")
     file_name = time.strftime("%Y%m%d-%H%M%S") + ".txt"
     file = open(file_name,'w', encoding="utf-8")
@@ -160,6 +221,11 @@ def exportText(message):
 
 @bot.message_handler(func=lambda message: message.text == 'PDF')
 def exportPDF(message):
+    """Exports the summary in .pdf format and sends it to the user.
+
+    Args:
+        message (object)
+    """
     bot.send_message(message.chat.id, "Your text file is being processed")
     pdf = FPDF()
     pdf.add_page()
@@ -183,6 +249,12 @@ def exportPDF(message):
 
 @bot.message_handler(func= lambda message: message.text == 'Image')
 def exportImage(message):
+    """Exports the summary written on black white image in .png format and sends it to the 
+        user
+
+    Args:
+        message (object)
+    """
     bot.send_message(message.chat.id, "Your text file is being processed")
     img = Image.new('RGB', (1920, 1080), color='white')
     Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 80)
@@ -227,16 +299,32 @@ def exportImage(message):
 
 @bot.message_handler(func= lambda message: message.text == 'None')
 def exportNone(message):
+    """If user does not want to export the summary in any format.
+
+    Args:
+        message (object)
+    """
     bot.send_message(message.chat.id,"Thank You for using this bot")
 
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
+    """Greets the first time user.
+
+    Args:
+        message (object)
+    """
     greet = (f"Hello {message.from_user.username},\nWikipedia Summarizer Bot this side.\nHere you can send" +
             " link of any wikipedia article to summarize it.\nThis bot is created by Gurman Singh.\nThank You for using it")
     bot.send_message(message.chat.id, greet)
 
 @bot.message_handler(regexp="(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?")
 def handle_text_doc(message):
+    """Received message is checked, whether it contains a url or not and then further 
+        processed
+
+    Args:
+        message (object)
+    """
     try:
         url = re.search("(?P<url>https?://[^\s]+)", message.text).group("url")
         print(url)
@@ -259,6 +347,11 @@ def handle_text_doc(message):
 @bot.message_handler(func = lambda message: True, 
                         content_types=['audio','photo','voice','video','document','contact','text','location','sticker'])
 def default_message(message):
+    """All the other messages that does not contain url are received here
+
+    Args:
+        message (object)
+    """
     bot.send_message(message.chat.id, "Command Not recognised")
 
 # let's begin
