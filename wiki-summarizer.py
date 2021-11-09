@@ -232,6 +232,10 @@ def exportImage(message):
             bot.send_photo(message.chat.id, photo=open(file_name,'rb'))
             os.remove(file_name)
 
+@bot.message_handler(func= lambda message: message.text == 'None')
+def exportNone(message):
+    bot.send_message(message.chat.id,"Thank You for using this bot")
+
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
     '''botsome
@@ -271,4 +275,8 @@ def default_message(message):
 
 # let's begin
 if __name__ == "__main__":
-    bot.polling()
+    while(True):
+        try:
+            bot.polling()
+        except:
+            continue
