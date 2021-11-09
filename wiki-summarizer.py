@@ -1,5 +1,6 @@
 # from logging import error
 from fpdf import FPDF
+from fpdf.py3k import b
 import nltk
 from nltk.corpus import stopwords
 from nltk.cluster.util import cosine_distance
@@ -140,7 +141,7 @@ def export_summary(message):
     bot.send_message(message.chat.id, "Choose one letter:", reply_markup=markup)
 
 @bot.message_handler(func=lambda message: message.text == 'Text File')
-def export_text(message):
+def exportText(message):
     bot.send_message(message.chat.id, "Your text file is being processed")
     file_name = time.strftime("%Y%m%d-%H%M%S") + ".txt"
     file = open(file_name,'w', encoding="utf-8")
@@ -164,25 +165,25 @@ def export_text(message):
     os.remove(file_name)
 
 @bot.message_handler(func=lambda message: message.text == 'PDF')
-def export_pdf(message):
+def exportPDF(message):
     bot.send_message(message.chat.id, "Your text file is being processed")
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Times",style='B', size = 16)
-
+    file_name = time.strftime("%Y%m%d-%H%M%S") + ".pdf"
     try:
         pdf.cell(200, 7.5, txt = f"Summary - {handle_text_doc.title}", ln = 1, align = 'C')
-    except:
-        bot.send_message(message.chat.id, "Error No URL is passed")
-    else:
         pdf.set_font("Times", size = 12)
         for text in handle_text_doc.splitted[0]:
             # text = re.sub(r' +',' ',text)
-            text2 = text.encode('latin-1', 'replace').decode('latin-1')
+            text2 = text.encode('latin-1', 'ignore').decode('latin-1')
             pdf.multi_cell(200, 5, txt = text2, align = 'L')
-
-        file_name = time.strftime("%Y%m%d-%H%M%S") + ".pdf"
         pdf.output(file_name)
+    except UnicodeEncodeError:
+        bot.send_message(message.chat.id,"Can't export this summary to PDF due to decoding error")
+    except AttributeError:
+        bot.send_message(message.chat.id, "Error No URL is passed")
+    else:
         bot.send_message(message.chat.id, "File processing completed")
         bot.send_document(message.chat.id, data = open(file_name,'rb'))
         os.remove(file_name)
@@ -190,31 +191,46 @@ def export_pdf(message):
 @bot.message_handler(func= lambda message: message.text == 'Image')
 def exportImage(message):
     bot.send_message(message.chat.id, "Your text file is being processed")
-    img = Image.new('RGB', (1170, 2532), color='white')
-    Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 75)
+    img = Image.new('RGB', (1920, 1080), color='white')
+    Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 80)
     draw = ImageDraw.Draw(img)
     y_text = 50
+    img_exist = False
 
     try:
-        line_width, line_height = Font.getsize(handle_text_doc.title)
-        draw.text(((1170 - line_width) / 2, y_text), f"Summary - {handle_text_doc.title}", font=Font, fill=(0,0,0))
+        line_width, line_height = Font.getsize(f"Summary - {handle_text_doc.title}")
+        draw.text(((1920 - line_width) / 2, y_text), f"Summary - {handle_text_doc.title}", font=Font, fill=(0,0,0))
         y_text += line_height
     except:
         bot.send_message(message.chat.id, "Error No URL is passed")
     else:    
-        Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 45)
+        Font = ImageFont.truetype('Roboto[wdth,wght].ttf', size = 40)
         for text in handle_text_doc.splitted[0]:
-            lines = textwrap.wrap(text, width=60)
+            lines = textwrap.wrap(text, width=100)
             for line in lines:
-                line_width, line_height = Font.getsize(line)
-                draw.text(((1170 - line_width) / 2, y_text), line, font=Font, fill=(0,0,0))
-                y_text += line_height
+                if (y_text + line_height < 1080):
+                    line_width, line_height = Font.getsize(line)
+                    draw.text(((1920 - line_width) / 2, y_text), line, font=Font, fill=(0,0,0))
+                    y_text += line_height
+                else :
+                    img2 = Image.new('RGB', (1920, 1080), color='white')
+                    draw2 = ImageDraw.Draw(img2)
+                    y_text2 = 10
+                    line_width2, line_height2 = Font.getsize(line)
+                    draw2.text(((1920 - line_width2) / 2, y_text2), line, font=Font, fill=(0,0,0))
+                    y_text2 += line_height2
+                    img_exist = True
         
         file_name = time.strftime("%Y%m%d-%H%M%S") + ".png"
         img.save(file_name)
         bot.send_message(message.chat.id, "File processing completed")
         bot.send_photo(message.chat.id, photo=open(file_name,'rb'))
         os.remove(file_name)
+        if (img_exist):
+            file_name = time.strftime("%Y%m%d-%H%M%S") + ".png"
+            img2.save(file_name)
+            bot.send_photo(message.chat.id, photo=open(file_name,'rb'))
+            os.remove(file_name)
 
 @bot.message_handler(commands=['start','help','Start','Help','START','HELP'])
 def greet(message):
@@ -255,5 +271,4 @@ def default_message(message):
 
 # let's begin
 if __name__ == "__main__":
-    while(True):
-        bot.polling()
+    bot.polling()
