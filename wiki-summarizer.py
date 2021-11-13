@@ -279,7 +279,7 @@ def exportImage(message):
                     line_width, line_height = Font.getsize(line)
                     draw.text(((1920 - line_width) / 2, y_text), line, font=Font, fill=(0,0,0))
                     y_text += line_height
-                else if (y_text2 + line_height2 < 1080):
+                else:
                     img2 = Image.new('RGB', (1920, 1080), color='white')
                     draw2 = ImageDraw.Draw(img2)
                     y_text2 = 10
