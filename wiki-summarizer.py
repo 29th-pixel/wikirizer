@@ -261,7 +261,9 @@ def exportImage(message):
     draw = ImageDraw.Draw(img)
     y_text = 50
     img_exist = False
-
+    y_text2 = 0
+    line_height2 = 0
+    
     try:
         line_width, line_height = Font.getsize(f"Summary - {handle_text_doc.title}")
         draw.text(((1920 - line_width) / 2, y_text), f"Summary - {handle_text_doc.title}", font=Font, fill=(0,0,0))
@@ -277,7 +279,7 @@ def exportImage(message):
                     line_width, line_height = Font.getsize(line)
                     draw.text(((1920 - line_width) / 2, y_text), line, font=Font, fill=(0,0,0))
                     y_text += line_height
-                else :
+                else if (y_text2 + line_height2 < 1080):
                     img2 = Image.new('RGB', (1920, 1080), color='white')
                     draw2 = ImageDraw.Draw(img2)
                     y_text2 = 10
@@ -313,8 +315,8 @@ def greet(message):
     Args:
         message (object)
     """
-    greet = (f"Hello {message.from_user.username},\nWikipedia Summarizer Bot this side.\nHere you can send" +
-            " link of any wikipedia article to summarize it.\nThis bot is created by Gurman Singh.\nThank You for using it")
+    greet = (f"Hello {message.from_user.username},\nWikiRizer Bot this side.You can start sending" +
+            " links of any wikipedia article to summarize it.")
     bot.send_message(message.chat.id, greet)
 
 @bot.message_handler(regexp="(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?")
