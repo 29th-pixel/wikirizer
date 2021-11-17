@@ -5,4 +5,4 @@ I have also make sure to include the 1 paragraph of every article to make the re
 
 Users can also export the Summary to Text, PDF and Image files according to their needs which makes sharing of summary much easier.
 
-This bot will be hosted in few days and become ready to use. You can add it to your Telegram by searching wikiSummarize_bot or following this link will take you directly to bot [wikiSummarize_bot](http://t.me/wikiSummarize_bot)
+Currently this bot is hosted on pythonanywhere.com. You can add it to your Telegram by searching wikiSummarize_bot or following this link will take you directly to bot [wikiSummarize_bot](http://t.me/wikiSummarize_bot)
